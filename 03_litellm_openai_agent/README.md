@@ -1,3 +1,15 @@
-# 03_litellm_openai_agent
+# LiteLLM Agent Example
 
-This folder contains the 03_litellm_openai_agent agent demo.
+This project demonstrates how to use [LiteLLM](https://github.com/BerriAI/litellm) to interact with various LLM providers using a unified API interface.
+
+## 📦 Features
+
+- Supports multiple LLMs like OpenAI, Claude, Gemini, DeepSeek (via OpenRouter)
+- Unified API for completion and chat models
+- Easy to swap models with minimal code change
+
+## ⚙️ Setup Instructions
+
+### 1. Clone and Enter Project
+```bash
+cd litellm-agent
