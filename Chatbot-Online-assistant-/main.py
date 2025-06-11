@@ -2,37 +2,52 @@
 import chainlit as cl
 import os
 from dotenv import load_dotenv
-import requests
+from openai import AsyncOpenAI
+import logging
 
-# Load environment variables from .env file
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+MODEL = "gpt-3.5-turbo"
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+if not API_KEY:
+    raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
-# Initialize Chainlit app
+# Configure OpenAI
+client = AsyncOpenAI(api_key=API_KEY)
+
+@cl.on_chat_start
+async def on_chat_start():
+    await cl.Message(content="""
+**Welcome to the Chat Assistant!** 👋
+
+I'm here to help you with any questions you have. Feel free to ask anything!
+""").send()
+
 @cl.on_message
 async def main(message: cl.Message):
-    user_prompt = message.content
-# Sets up the headers for the OpenRouter API request, including the authorization token
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-# Constructs the request body for the OpenRouter API
-    body = {
-        "model": "gpt-4o-mini",
-        "messages": [
-            {"role": "user", "content": user_prompt}
-        ]
-    }
-# Sends a POST request to the OpenRouter API with the user's message
-    response = requests.post(OPENROUTER_URL, headers=headers, json=body)
-# Checks the response status and extracts the reply from the API response
-    if response.status_code == 200:
-        data = response.json()
-        reply = data['choices'][0]['message']['content']
-    else:
-        reply = f"API Error: {response.status_code}"
-# Sends the reply back to the user in the Chainlit interface
-    await cl.Message(content=reply).send()
+    try:
+        # Log the API key status (without showing the actual key)
+        logger.info(f"API Key present: {'Yes' if API_KEY else 'No'}")
+        
+        response = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": message.content}
+            ],
+            temperature=0.7,
+            max_tokens=400
+        )
+        
+        reply = response.choices[0].message.content
+        await cl.Message(content=reply).send()
+        
+    except Exception as e:
+        error_message = f"Error details: {str(e)}"
+        logger.error(error_message, exc_info=True)
+        await cl.Message(content=f"An error occurred: {error_message}").send()
