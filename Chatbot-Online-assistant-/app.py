@@ -1,7 +1,7 @@
 import chainlit as cl
 import os
 from dotenv import load_dotenv
-import litellm
+from openai import AsyncOpenAI
 import logging
 import json
 
@@ -11,24 +11,14 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL = "openrouter/google/gemini-2.5-flash-preview-05-20"
-BASE_URL = "https://openrouter.ai/api/v1"
-PROVIDER = "openrouter"
-
-litellm.telemetry = False
+API_KEY = os.getenv("OPENAI_API_KEY")
+MODEL = "gpt-3.5-turbo"
 
 if not API_KEY:
-    raise ValueError("Please set the OPENROUTER_API_KEY environment variable.")
+    raise ValueError("Please set the OPENAI_API_KEY environment variable.")
 
-# Register model with LiteLLM
-litellm.register_model({
-    MODEL: {
-        "api_base": BASE_URL,
-        "api_key": API_KEY,
-        "provider": PROVIDER
-    }
-})
+# Configure OpenAI
+client = AsyncOpenAI(api_key=API_KEY)
 
 # Career knowledge base
 career_kb = {
@@ -81,11 +71,9 @@ class CareerCoachAgent:
 
     async def generate_response(self, messages: list[dict]) -> str:
         try:
-            response = await litellm.acompletion(
+            response = await client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                api_key=API_KEY,
-                api_base=BASE_URL,
                 tools=self.tools_config,
                 tool_choice="auto",
                 temperature=0.7,
@@ -108,11 +96,9 @@ class CareerCoachAgent:
                         "name": tool_name,
                         "content": tool_output
                     })
-                    follow_up = await litellm.acompletion(
+                    follow_up = await client.chat.completions.create(
                         model=self.model,
                         messages=messages,
-                        api_key=API_KEY,
-                        api_base=BASE_URL,
                         tools=self.tools_config,
                         tool_choice="auto",
                         temperature=0.7,
